@@ -2,7 +2,6 @@
 import os
 import sys
 import hashlib
-import platform
 try:
     # prefer the backport for Python <3.5
     from pathlib2 import Path
@@ -64,9 +63,11 @@ def get_config(config_file_name=str(find_config())):
 
 
 def make_data_file_name():
-    """Find the path to the reentry executable and mangle it into a file name.
+    """Create name for file to store entry points.
 
-    Note: In order to avoid long filenames (e.g. on conda forge), the relevant info is hashed.
+    Uses the path to the reentry executable as well as information on the python environment.
+
+    Note: In order to avoid long filenames (e.g. on conda forge), the filename hashed.
     """
     sep = os.path.sep
     python_bin_dir = str(Path(sys.executable).resolve().parent)
@@ -81,29 +82,16 @@ def make_data_file_name():
     return file_name_hash.hexdigest()
 
 
-def hashed_data_file_name():
-    """Find the path to the reentry executable and mangle it into a file name."""
-
-    fname = 'u{bin_dir}_{impl}-{ver}'.format(
-        bin_dir=Path(sys.executable).resolve().parent, impl=platform.python_implementation(), ver=platform.python_version())
-
-    path_hash = hashlib.sha256(fname.encode('utf-8'))
-    return path_hash.hexdigest()
-
-
 def get_datafile():
-    """Create the path to the data file used to store entry points."""
+    """Return content of the data file used to store entry points."""
     config = get_config()
 
-    pkg_path_filename = make_data_file_name()
-    datafile = Path(config.get('general', 'datadir')).joinpath(pkg_path_filename)
+    data_filename = make_data_file_name()
+    datafile = Path(config.get('general', 'datadir')).joinpath(data_filename)
     if datafile.exists():  # pylint: disable=no-member
         return str(datafile)  # if the unhashed exists, continue to use that one
 
-    pkg_path_filename = hashed_data_file_name()
-    datafile = Path(config.get('general', 'datadir')).joinpath(pkg_path_filename)
-    if not datafile.exists():  # pylint: disable=no-member
-        datafile.parent.mkdir(parents=True, exist_ok=True)
-        datafile.write_text(u'{}')
+    datafile.parent.mkdir(parents=True, exist_ok=True)
+    datafile.write_text(u'{}')  # pylint: disable=no-member
 
     return str(datafile)
